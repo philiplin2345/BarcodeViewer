@@ -9,9 +9,11 @@ import SwiftUI
 
 @main
 struct BarcodeViewerApp: App {
+    @State private var store = BarcodeStore()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(store: store)
         }
     }
 }

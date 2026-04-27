@@ -9,11 +9,26 @@ import SwiftUI
 
 /// Main view: displays the current barcode full-width.
 /// Swipe left/right to cycle. Toolbar for list and add.
+///
+/// Brightness: maxed when displaying a barcode with no sheets open
+/// and the app is active. Restored to the user's original level otherwise.
 struct ContentView: View {
     @Bindable var store: BarcodeStore
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var showingAddSheet = false
     @State private var showingListSheet = false
+
+    /// The user's brightness before we cranked it up.
+    @State private var savedBrightness: CGFloat = UIScreen.main.brightness
+
+    /// Whether we should be at max brightness right now.
+    private var wantsMaxBrightness: Bool {
+        store.currentItem != nil
+        && !showingAddSheet
+        && !showingListSheet
+        && scenePhase == .active
+    }
 
     var body: some View {
         NavigationStack {
@@ -49,6 +64,26 @@ struct ContentView: View {
             .sheet(isPresented: $showingListSheet) {
                 BarcodeListView(store: store)
             }
+        }
+        .onAppear { updateBrightness() }
+        .onChange(of: scenePhase) { _, _ in updateBrightness() }
+        .onChange(of: showingAddSheet) { _, _ in updateBrightness() }
+        .onChange(of: showingListSheet) { _, _ in updateBrightness() }
+        .onChange(of: store.currentItem?.id) { _, _ in updateBrightness() }
+    }
+
+    // MARK: - Brightness
+
+    private func updateBrightness() {
+        if wantsMaxBrightness {
+            // Capture current brightness only if we haven't already maxed it,
+            // so we don't accidentally save 1.0 as the "original" value.
+            if UIScreen.main.brightness < 1.0 {
+                savedBrightness = UIScreen.main.brightness
+            }
+            UIScreen.main.brightness = 1.0
+        } else {
+            UIScreen.main.brightness = savedBrightness
         }
     }
 
